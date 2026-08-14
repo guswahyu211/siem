@@ -1,0 +1,1381 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIEM - USB Management & Monitoring</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- React & Babel via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Icons -->
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+    <!-- Recharts for charts (optional, but good for dashboard) -->
+    <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
+
+    <style>
+        :root {
+            --primary: #C53030;
+            --primary-hover: #9B2C2C;
+            --secondary: #E53E3E; /* Lighter red */
+            --danger: #EF4444;
+            --warning: #F59E0B;
+            --bg-dark: #FFFFFF; /* Pure White */
+            --bg-card: #FFFFFF; /* Pure White */
+            --bg-sidebar: #F8FAFC;
+            --text-main: #1E293B;
+            --text-muted: #64748B;
+            --border: rgba(197, 48, 48, 0.15);
+            --glass-bg: rgba(255, 255, 255, 0.6);
+            --glass-border: rgba(197, 48, 48, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(197, 48, 48, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(197, 48, 48, 0.05) 0px, transparent 50%);
+            background-attachment: fixed;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 260px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-right: 1px solid var(--glass-border);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem 0;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar-brand {
+            padding: 0 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--primary);
+            border-bottom: 1px solid var(--glass-border);
+            margin-bottom: 1rem;
+        }
+        
+        .sidebar-brand ion-icon {
+            font-size: 1.8rem;
+            color: var(--primary);
+        }
+
+        .nav-menu {
+            list-style: none;
+            padding: 0 1rem;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .nav-item {
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-link {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.8rem 1rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .nav-link:hover {
+            background: rgba(197, 48, 48, 0.05);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background: rgba(197, 48, 48, 0.1);
+            color: var(--primary);
+            border-left: 3px solid var(--primary);
+        }
+
+        .nav-link ion-icon {
+            font-size: 1.25rem;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 1.5rem;
+            border-top: 1px solid var(--glass-border);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .topbar {
+            height: 70px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 2rem;
+        }
+
+        .content-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+
+        /* Cards & Glassmorphism */
+        .glass-card {
+            background: var(--bg-card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .glass-card:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Grid Layouts */
+        .grid-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0; right: 0;
+            width: 80px; height: 80px;
+            background: radial-gradient(circle, var(--stat-color) 0%, transparent 70%);
+            opacity: 0.15;
+            border-radius: 50%;
+            transform: translate(20%, -20%);
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .stat-card-red {
+            background: linear-gradient(135deg, #820000 0%, #C53030 100%);
+            border: none;
+            box-shadow: 0 4px 12px rgba(197, 48, 48, 0.2);
+        }
+        
+        .stat-card-red .stat-value, .stat-card-red .stat-label {
+            color: #FFFFFF !important;
+        }
+
+        .stat-card-red::after {
+            background: radial-gradient(circle, #FFFFFF 0%, transparent 70%);
+            opacity: 0.1;
+        }
+
+        /* Tables */
+        .table-container {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        th {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        td {
+            font-size: 0.875rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tbody tr:hover {
+            background: rgba(197, 48, 48, 0.02);
+        }
+
+        /* Badges */
+        .badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .badge-success { background: rgba(16, 185, 129, 0.15); color: #10B981; border: 1px solid rgba(16,185,129,0.3); }
+        .badge-danger { background: rgba(239, 68, 68, 0.15); color: #EF4444; border: 1px solid rgba(239,68,68,0.3); }
+        .badge-warning { background: rgba(245, 158, 11, 0.15); color: #F59E0B; border: 1px solid rgba(245,158,11,0.3); }
+        .badge-info { background: rgba(56, 189, 248, 0.15); color: #38BDF8; border: 1px solid rgba(56,189,248,0.3); }
+        .badge-neutral { background: rgba(148, 163, 184, 0.15); color: #94A3B8; border: 1px solid rgba(148,163,184,0.3); }
+
+        /* Buttons */
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .btn:hover { background: var(--primary-hover); transform: translateY(-1px); }
+        .btn-danger { background: var(--danger); }
+        .btn-danger:hover { background: #DC2626; }
+        .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+        .btn-outline:hover { background: rgba(197, 48, 48, 0.05); }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-muted);
+        }
+        .form-control {
+            width: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .form-control:focus {
+            border-color: var(--primary);
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: var(--danger);
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 16px; width: 16px;
+            left: 4px; bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider { background-color: var(--secondary); }
+        input:checked + .slider:before { transform: translateX(26px); }
+
+        /* Login Screen */
+        .login-screen {
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #FFFFFF 0%, #FEE2E2 50%, #C53030 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .login-screen::after {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%; width: 200%; height: 200%;
+            background: radial-gradient(circle, rgba(197, 48, 48, 0.1) 0%, transparent 40%);
+            z-index: 0;
+            pointer-events: none;
+            animation: pulse-danger 8s infinite alternate;
+        }
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.95);
+            box-shadow: 0 25px 50px -12px rgba(197, 48, 48, 0.35);
+            border: 1px solid rgba(197, 48, 48, 0.2);
+        }
+
+        /* Live Event Stream */
+        .event-stream {
+            max-height: 400px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .event-item {
+            display: flex;
+            gap: 1rem;
+            padding: 0.75rem;
+            background: rgba(197, 48, 48, 0.03);
+            border-radius: 0.5rem;
+            border-left: 3px solid transparent;
+            animation: fadeIn 0.3s ease;
+        }
+        .event-info { border-left-color: var(--primary); }
+        .event-warning { border-left-color: var(--warning); }
+        .event-danger { border-left-color: var(--danger); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Animations */
+        .spin { animation: spin 1s linear infinite; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* Toasts */
+        .toast-container { position: fixed; bottom: 2rem; right: 2rem; z-index: 9999; display: flex; flex-direction: column; gap: 0.5rem; }
+        .toast { padding: 1rem; border-radius: 0.5rem; background: var(--bg-card); backdrop-filter: blur(10px); border: 1px solid var(--border); color: var(--text-main); display: flex; align-items: center; gap: 0.5rem; animation: slideIn 0.3s ease; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        @keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+        /* Hamburger Button */
+        .hamburger-btn {
+            display: none;
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0.5rem;
+            color: var(--primary);
+            font-size: 1.6rem;
+            z-index: 1001;
+        }
+        .hamburger-btn ion-icon {
+            font-size: 1.6rem;
+        }
+
+        /* Mobile Overlay */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 998;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sidebar-overlay.active {
+            opacity: 1;
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 768px) {
+            .hamburger-btn {
+                display: flex;
+                align-items: center;
+            }
+
+            .sidebar {
+                position: fixed;
+                top: 0; left: 0;
+                height: 100vh;
+                z-index: 999;
+                transform: translateX(-100%);
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                width: 280px;
+                box-shadow: none;
+            }
+            .sidebar.open {
+                transform: translateX(0);
+                box-shadow: 4px 0 25px rgba(0, 0, 0, 0.15);
+            }
+
+            .sidebar-overlay {
+                display: block;
+            }
+
+            .topbar {
+                padding: 0 1rem;
+                height: 60px;
+            }
+
+            .content-area {
+                padding: 1rem;
+            }
+
+            .grid-stats {
+                grid-template-columns: repeat(2, 1fr);
+                gap: 0.75rem;
+            }
+
+            .stat-value {
+                font-size: 1.5rem;
+            }
+
+            .glass-card {
+                padding: 1rem;
+                border-radius: 0.75rem;
+            }
+
+            th, td {
+                padding: 0.6rem 0.5rem;
+                font-size: 0.75rem;
+            }
+
+            .login-box {
+                margin: 1rem;
+                max-width: calc(100vw - 2rem);
+            }
+
+            .toast-container {
+                bottom: 1rem;
+                right: 1rem;
+                left: 1rem;
+            }
+            .toast {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .grid-stats {
+                grid-template-columns: 1fr;
+            }
+
+            .topbar h3 {
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- COMPONENTS ---
+
+        function Toast({ toasts }) {
+            return (
+                <div className="toast-container">
+                    {toasts.map(t => (
+                        <div key={t.id} className="toast" style={{borderLeft: `4px solid ${t.type==='error'?'var(--danger)':'var(--secondary)'}`}}>
+                            <ion-icon name={t.type==='error'?'alert-circle':'checkmark-circle'} style={{color: t.type==='error'?'var(--danger)':'var(--secondary)', fontSize:'1.2rem'}}></ion-icon>
+                            {t.message}
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        function Login({ onLogin, addToast }) {
+            const [user, setUser] = useState('');
+            const [pass, setPass] = useState('');
+            const [loading, setLoading] = useState(false);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setLoading(true);
+                try {
+                    const r = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({username: user, password: pass})
+                    });
+                    const d = await r.json();
+                    if(r.ok) onLogin(d.user);
+                    else addToast(d.message || 'Login gagal', 'error');
+                } catch(e) {
+                    addToast('Network error', 'error');
+                }
+                setLoading(false);
+            };
+
+            return (
+                <div className="login-screen">
+                    <div className="glass-card login-box">
+                        <div style={{textAlign:'center', marginBottom: '2rem'}}>
+                            <img src="/static/new-logo-bdgianyar.png" alt="BD Gianyar Logo" style={{height:'80px', objectFit:'contain', marginBottom:'1rem'}} />
+                            <h2 style={{marginTop:'0.5rem', color: 'var(--primary)'}}>SIEM Security Center</h2>
+                            <p className="stat-label">System Authentication</p>
+                        </div>
+                        <form onSubmit={handleSubmit}>
+                            <div className="form-group">
+                                <label className="form-label">Username</label>
+                                <input type="text" className="form-control" value={user} onChange={e=>setUser(e.target.value)} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Password</label>
+                                <input type="password" className="form-control" value={pass} onChange={e=>setPass(e.target.value)} required />
+                                <div style={{textAlign:'right', marginTop:'0.5rem'}}>
+                                    <a href="#" onClick={(e)=>{e.preventDefault(); addToast('Saat ini fitur lupa password belum tersedia', 'warning');}} style={{color:'var(--primary)', fontSize:'0.875rem', textDecoration:'none', fontWeight:500}}>Lupa Password?</a>
+                                </div>
+                            </div>
+                            <button type="submit" className="btn" style={{width:'100%', justifyContent:'center', marginTop:'1rem'}} disabled={loading}>
+                                {loading ? <ion-icon name="sync" className="spin"></ion-icon> : 'Login'}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // --- VIEWS ---
+
+        function Overview() {
+            const [stats, setStats] = useState(null);
+            const [events, setEvents] = useState([]);
+
+            const load = async () => {
+                try {
+                    const r1 = await fetch('/api/overview');
+                    if(r1.ok) setStats((await r1.json()).data);
+                    const r2 = await fetch('/api/events/recent');
+                    if(r2.ok) setEvents((await r2.json()).data);
+                } catch(e) {}
+            };
+
+            useEffect(() => {
+                load();
+                const i = setInterval(load, 5000);
+                return () => clearInterval(i);
+            }, []);
+
+            if(!stats) return <div style={{textAlign:'center', padding:'3rem'}}><ion-icon name="sync" className="spin" style={{fontSize:'2rem', color:'var(--primary)'}}></ion-icon></div>;
+
+            return (
+                <div>
+                    <h2 style={{marginBottom: '1.5rem', color: 'var(--primary)'}}>Dashboard Overview</h2>
+                    <div className="grid-stats">
+                        <div className="glass-card stat-card stat-card-red">
+                            <span className="stat-label">Total Perangkat</span>
+                            <span className="stat-value">{stats.total_devices}</span>
+                        </div>
+                        <div className="glass-card stat-card stat-card-red">
+                            <span className="stat-label">Perangkat Online</span>
+                            <span className="stat-value">{stats.online}</span>
+                        </div>
+                        <div className="glass-card stat-card stat-card-red">
+                            <span className="stat-label">Perangkat Offline</span>
+                            <span className="stat-value">{stats.offline}</span>
+                        </div>
+                        <div className="glass-card stat-card stat-card-red">
+                            <span className="stat-label">Login Hari Ini</span>
+                            <span className="stat-value">{stats.logins_today}</span>
+                        </div>
+                        <div className="glass-card stat-card stat-card-red">
+                            <span className="stat-label">Event USB Hari Ini</span>
+                            <span className="stat-value">{stats.usb_events_today}</span>
+                        </div>
+                        <div className="glass-card stat-card stat-card-red" style={{border: '1px solid rgba(255,255,255,0.4)'}}>
+                            <span className="stat-label">USB Diblokir (Harian)</span>
+                            <span className="stat-value">{stats.usb_blocked_today}</span>
+                        </div>
+                    </div>
+
+                    <div className="glass-card" style={{borderTop: '4px solid var(--primary)'}}>
+                        <h3 className="card-title" style={{color: 'var(--primary)'}}><ion-icon name="pulse-outline"></ion-icon> Live Event Stream</h3>
+                        <div className="event-stream">
+                            {events.map((e,i) => {
+                                let cls = 'event-item event-info';
+                                if(e.severity==='warning') cls='event-item event-warning';
+                                if(e.severity==='error' || e.severity==='critical') cls='event-item event-danger';
+                                return (
+                                    <div key={e.id} className={cls}>
+                                        <div style={{color:'var(--text-muted)', fontSize:'0.8rem', minWidth:'150px'}}>{e.timestamp}</div>
+                                        <div style={{flex:1}}>
+                                            <strong style={{marginRight:'1rem'}}>[{e.event_type.toUpperCase()}]</strong>
+                                            {e.message}
+                                        </div>
+                                        <div className="badge badge-neutral">{e.source}</div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function Devices() {
+            const [devs, setDevs] = useState([]);
+            useEffect(() => {
+                const load = async () => {
+                    try {
+                        const r = await fetch('/api/devices');
+                        if(r.ok) setDevs((await r.json()).data);
+                    } catch(e) {}
+                };
+                load();
+                const i = setInterval(load, 5000);
+                return () => clearInterval(i);
+            }, []);
+
+            return (
+                <div>
+                    <h2 style={{marginBottom: '1.5rem'}}>Daftar Perangkat (Agent)</h2>
+                    <div className="glass-card">
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Status</th>
+                                        <th>Hostname</th>
+                                        <th>IP Address</th>
+                                        <th>OS Info</th>
+                                        <th>Agent Ver</th>
+                                        <th>Last Seen</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {devs.map(d => (
+                                        <tr key={d.id}>
+                                            <td>
+                                                <span className={`badge ${d.status==='online'?'badge-success':'badge-danger'}`}>
+                                                    {d.status.toUpperCase()}
+                                                </span>
+                                            </td>
+                                            <td><strong>{d.hostname}</strong></td>
+                                            <td>{d.ip_address}</td>
+                                            <td>{d.os_info}</td>
+                                            <td>v{d.agent_version}</td>
+                                            <td style={{color:'var(--text-muted)'}}>{d.last_seen}</td>
+                                        </tr>
+                                    ))}
+                                    {devs.length===0 && <tr><td colSpan="6" style={{textAlign:'center', padding:'2rem'}}>Tidak ada perangkat terdaftar</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function DateFilter({ date, setDate }) {
+            return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '1.5rem', background: 'rgba(255, 255, 255, 0.05)', padding: '10px 15px', borderRadius: '8px', border: '1px solid rgba(255, 255, 255, 0.1)', width: 'fit-content' }}>
+                    <ion-icon name="calendar" style={{ color: 'var(--primary)', fontSize: '1.2rem' }}></ion-icon>
+                    <span style={{ fontWeight: '600' }}>Pilih Tanggal:</span>
+                    <input 
+                        type="date" 
+                        value={date} 
+                        onChange={(e) => setDate(e.target.value)}
+                        style={{
+                            background: 'rgba(0,0,0,0.3)', 
+                            border: '1px solid rgba(255,255,255,0.2)', 
+                            color: 'white', 
+                            padding: '6px 12px', 
+                            borderRadius: '4px',
+                            outline: 'none',
+                            fontFamily: 'inherit',
+                            cursor: 'pointer'
+                        }}
+                    />
+                    {date && (
+                        <button onClick={() => setDate('')} title="Reset" style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', fontSize: '1.2rem' }}>
+                            <ion-icon name="close-circle"></ion-icon>
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        function UsbMonitoring() {
+            const [evs, setEvs] = useState([]);
+            const [filterDate, setFilterDate] = useState('');
+            
+            useEffect(() => {
+                const load = async () => {
+                    try {
+                        const url = filterDate ? `/api/usb-events?date=${filterDate}` : '/api/usb-events';
+                        const r = await fetch(url);
+                        if(r.ok) setEvs((await r.json()).data);
+                    } catch(e) {}
+                };
+                load();
+                const i = setInterval(load, 5000);
+                return () => clearInterval(i);
+            }, [filterDate]);
+
+            return (
+                <div>
+                    <h2 style={{marginBottom: '1rem'}}>USB Monitoring</h2>
+                    <DateFilter date={filterDate} setDate={setFilterDate} />
+                    <div className="glass-card">
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Hostname</th>
+                                        <th>Serial Number</th>
+                                        <th>Nama Device</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {evs.map(e => (
+                                        <tr key={e.id}>
+                                            <td style={{color:'var(--text-muted)'}}>{e.timestamp}</td>
+                                            <td>{e.device_hostname}</td>
+                                            <td style={{fontFamily:'monospace', color:'var(--primary)'}}>{e.serial_number}</td>
+                                            <td>{e.device_name}</td>
+                                            <td>
+                                                <span className={`badge ${e.action==='blocked'?'badge-danger':(e.action==='connected'?'badge-info':'badge-success')}`}>
+                                                    {e.action.toUpperCase()}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function LoginActivity() {
+            const [evs, setEvs] = useState([]);
+            const [filterDate, setFilterDate] = useState('');
+
+            useEffect(() => {
+                const load = async () => {
+                    try {
+                        const url = filterDate ? `/api/login-events?date=${filterDate}` : '/api/login-events';
+                        const r = await fetch(url);
+                        if(r.ok) setEvs((await r.json()).data);
+                    } catch(e) {}
+                };
+                load();
+                const i = setInterval(load, 5000);
+                return () => clearInterval(i);
+            }, [filterDate]);
+
+            return (
+                <div>
+                    <h2 style={{marginBottom: '1rem'}}>Login Activity (OS)</h2>
+                    <DateFilter date={filterDate} setDate={setFilterDate} />
+                    <div className="glass-card">
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Hostname</th>
+                                        <th>Username</th>
+                                        <th>IP Address</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {evs.map(e => (
+                                        <tr key={e.id}>
+                                            <td style={{color:'var(--text-muted)'}}>{e.timestamp}</td>
+                                            <td>{e.device_hostname}</td>
+                                            <td><strong>{e.username}</strong></td>
+                                            <td>{e.ip_address}</td>
+                                            <td>
+                                                <span className={`badge ${e.action==='login'?'badge-success':'badge-warning'}`}>
+                                                    {e.action.toUpperCase()}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function UserActivity() {
+            const [data, setData] = useState({aggregated:[], logs:[]});
+            const [filterDate, setFilterDate] = useState('');
+
+            useEffect(() => {
+                const load = async () => {
+                    try {
+                        const url = filterDate ? `/api/user-activities?date=${filterDate}` : '/api/user-activities';
+                        const r = await fetch(url);
+                        if(r.ok) setData(await r.json());
+                    } catch(e) {}
+                };
+                load();
+                const i = setInterval(load, 10000);
+                return () => clearInterval(i);
+            }, [filterDate]);
+
+            const formatDuration = (secs) => {
+                const h = Math.floor(secs / 3600);
+                const m = Math.floor((secs % 3600) / 60);
+                const s = secs % 60;
+                return `${h}j ${m}m ${s}d`;
+            };
+
+            return (
+                <div>
+                    <h2 style={{marginBottom: '1rem'}}>Aktivitas User</h2>
+                    <DateFilter date={filterDate} setDate={setFilterDate} />
+                    
+                    <div className="glass-card" style={{marginBottom: '2rem'}}>
+                        <h3 className="card-title">Top Aplikasi Hari Ini</h3>
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Proses (EXE)</th>
+                                        <th>Total Durasi</th>
+                                        <th>Log Terkumpul</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.aggregated.map((a,i) => (
+                                        <tr key={i}>
+                                            <td><strong>{a.process_name}</strong></td>
+                                            <td>{formatDuration(a.total_seconds)}</td>
+                                            <td>{a.count}x rekaman</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div className="glass-card">
+                        <h3 className="card-title">Log Aktivitas Terbaru (Live)</h3>
+                        <div className="table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Waktu</th>
+                                        <th>Hostname</th>
+                                        <th>User</th>
+                                        <th>Proses</th>
+                                        <th>Judul Jendela</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {data.logs.map(l => (
+                                        <tr key={l.id}>
+                                            <td style={{color:'var(--text-muted)'}}>{l.timestamp}</td>
+                                            <td>{l.device_hostname}</td>
+                                            <td>{l.username}</td>
+                                            <td><span className="badge badge-neutral">{l.process_name}</span></td>
+                                            <td style={{maxWidth:'300px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap'}} title={l.window_title}>{l.window_title}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function UsbPolicy({ addToast }) {
+            const [policies, setPolicies] = useState([]);
+            const [defPolicy, setDefPolicy] = useState('block');
+            const [form, setForm] = useState({serial_number:'', name:'', owner:'', action:'allow'});
+
+            const load = async () => {
+                try {
+                    const r1 = await fetch('/api/settings/default-policy');
+                    if(r1.ok) setDefPolicy((await r1.json()).policy);
+                    const r2 = await fetch('/api/usb-policies');
+                    if(r2.ok) setPolicies((await r2.json()).data);
+                } catch(e) {}
+            };
+
+            useEffect(() => { load(); }, []);
+
+            const toggleDefault = async () => {
+                const newPol = defPolicy === 'allow' ? 'block' : 'allow';
+                try {
+                    const r = await fetch('/api/settings/default-policy', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({policy: newPol})
+                    });
+                    if(r.ok) {
+                        setDefPolicy(newPol);
+                        addToast(`Kebijakan default diubah ke ${newPol==='allow'?'DIIZINKAN':'DIBLOKIR'}`);
+                    }
+                } catch(e) {}
+            };
+
+            const toggleItem = async (id) => {
+                try {
+                    const r = await fetch(`/api/usb-policies/${id}/toggle`, {method: 'PUT'});
+                    if(r.ok) load();
+                } catch(e) {}
+            };
+
+            const delItem = async (id) => {
+                if(!confirm('Hapus aturan ini?')) return;
+                try {
+                    const r = await fetch(`/api/usb-policies/${id}`, {method: 'DELETE'});
+                    if(r.ok) {
+                        addToast('Aturan dihapus');
+                        load();
+                    }
+                } catch(e) {}
+            };
+
+            const addPolicy = async (e) => {
+                e.preventDefault();
+                try {
+                    const r = await fetch('/api/usb-policies', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(form)
+                    });
+                    const d = await r.json();
+                    if(r.ok) {
+                        addToast('Aturan berhasil ditambahkan');
+                        setForm({serial_number:'', name:'', owner:'', action:'allow'});
+                        load();
+                    } else addToast(d.message || 'Gagal', 'error');
+                } catch(e) {}
+            };
+
+            return (
+                <div>
+                    <h2 style={{marginBottom: '1.5rem'}}>Kebijakan USB</h2>
+                    
+                    <div className="glass-card" style={{marginBottom: '2rem', display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        <div>
+                            <h3 className="card-title" style={{marginBottom:'0.2rem'}}>Kebijakan Default</h3>
+                            <p className="stat-label">Perangkat USB baru yang tidak ada di daftar aturan akan:</p>
+                        </div>
+                        <div style={{display:'flex', alignItems:'center', gap:'1rem'}}>
+                            <span style={{fontWeight:600, color: defPolicy==='block' ? 'var(--danger)' : 'var(--text-muted)'}}>DIBLOKIR</span>
+                            <label className="toggle-switch">
+                                <input type="checkbox" checked={defPolicy==='allow'} onChange={toggleDefault} />
+                                <span className="slider"></span>
+                            </label>
+                            <span style={{fontWeight:600, color: defPolicy==='allow' ? 'var(--secondary)' : 'var(--text-muted)'}}>DIIZINKAN</span>
+                        </div>
+                    </div>
+
+                    <div className="grid-stats" style={{gridTemplateColumns:'300px 1fr'}}>
+                        <div className="glass-card" style={{alignSelf: 'start'}}>
+                            <h3 className="card-title">Tambah Aturan Khusus</h3>
+                            <form onSubmit={addPolicy}>
+                                <div className="form-group">
+                                    <label className="form-label">Serial Number</label>
+                                    <input type="text" className="form-control" value={form.serial_number} onChange={e=>setForm({...form, serial_number:e.target.value})} required placeholder="Contoh: 4C5300013304" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Nama USB / Merk</label>
+                                    <input type="text" className="form-control" value={form.name} onChange={e=>setForm({...form, name:e.target.value})} required placeholder="SanDisk 32GB" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Pemilik</label>
+                                    <input type="text" className="form-control" value={form.owner} onChange={e=>setForm({...form, owner:e.target.value})} required placeholder="Andi - Finance" />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Aksi (Rule)</label>
+                                    <select className="form-control" value={form.action} onChange={e=>setForm({...form, action:e.target.value})}>
+                                        <option value="allow">Izinkan (Allow)</option>
+                                        <option value="block">Blokir (Block)</option>
+                                    </select>
+                                </div>
+                                <button type="submit" className="btn" style={{width:'100%', justifyContent:'center'}}><ion-icon name="add"></ion-icon> Tambah Aturan</button>
+                            </form>
+                        </div>
+                        
+                        <div className="glass-card">
+                            <h3 className="card-title">Daftar Aturan Khusus</h3>
+                            <div className="table-container">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>SN</th>
+                                            <th>Detail</th>
+                                            <th>Pemilik</th>
+                                            <th>Status</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {policies.map(p => (
+                                            <tr key={p.id}>
+                                                <td style={{fontFamily:'monospace', color:'var(--primary)'}}>{p.serial_number}</td>
+                                                <td>{p.name}</td>
+                                                <td>{p.owner}</td>
+                                                <td>
+                                                    <span className={`badge ${p.action==='allow'?'badge-success':'badge-danger'}`} style={{cursor:'pointer'}} onClick={()=>toggleItem(p.id)} title="Klik untuk mengubah">
+                                                        {p.action === 'allow' ? 'DIIZINKAN' : 'DIBLOKIR'}
+                                                        <ion-icon name="swap-vertical" style={{marginLeft:'0.2rem'}}></ion-icon>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <button className="btn btn-danger" style={{padding:'0.3rem 0.5rem'}} onClick={()=>delItem(p.id)}><ion-icon name="trash"></ion-icon></button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {policies.length===0 && <tr><td colSpan="5" style={{textAlign:'center', padding:'2rem'}}>Belum ada aturan</td></tr>}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        function Settings({ user, onUpdateUser, addToast }) {
+            const [profile, setProfile] = useState({ full_name: user.full_name||'', nickname: user.nickname||'', job_title: user.job_title||'' });
+            const [users, setUsers] = useState([]);
+            const [newUser, setNewUser] = useState({ username:'', password:'', full_name:'', nickname:'', job_title:'', role:'user' });
+            const photoInput = useRef(null);
+
+            const loadUsers = async () => {
+                if(user.role !== 'admin') return;
+                try { const r = await fetch('/api/users'); if(r.ok) setUsers((await r.json()).data); } catch(e) {}
+            };
+            useEffect(() => { loadUsers(); }, []);
+
+            const updateProfile = async (e) => {
+                e.preventDefault();
+                try {
+                    const r = await fetch('/api/profile', { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(profile) });
+                    if(r.ok) { addToast('Profil diperbarui'); const rr = await fetch('/api/me'); if(rr.ok) onUpdateUser((await rr.json()).user); }
+                } catch(e) {}
+            };
+
+            const uploadPhoto = async (e) => {
+                const file = e.target.files[0]; if(!file) return;
+                const fd = new FormData(); fd.append('photo', file);
+                try {
+                    const r = await fetch('/api/profile/photo', { method: 'POST', body: fd });
+                    if(r.ok) { addToast('Foto profil diperbarui'); const rr = await fetch('/api/me'); if(rr.ok) onUpdateUser((await rr.json()).user); }
+                    else { addToast((await r.json()).message, 'error'); }
+                } catch(e) {}
+            };
+
+            const removePhoto = async () => {
+                if(!confirm('Hapus foto profil?')) return;
+                try {
+                    const r = await fetch('/api/profile/photo', { method: 'DELETE' });
+                    if(r.ok) { addToast('Foto dihapus'); const rr = await fetch('/api/me'); if(rr.ok) onUpdateUser((await rr.json()).user); }
+                } catch(e) {}
+            };
+
+            const addUser = async (e) => {
+                e.preventDefault();
+                try {
+                    const r = await fetch('/api/users', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(newUser) });
+                    const d = await r.json();
+                    if(r.ok) { addToast('Akun berhasil ditambahkan'); setNewUser({ username:'', password:'', full_name:'', nickname:'', job_title:'', role:'user' }); loadUsers(); }
+                    else addToast(d.message || 'Gagal tambah akun', 'error');
+                } catch(e) {}
+            };
+
+            const delUser = async (id) => {
+                if(!confirm('Hapus akun ini?')) return;
+                try {
+                    const r = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+                    if(r.ok) { addToast('Akun dihapus'); loadUsers(); }
+                    else addToast((await r.json()).message, 'error');
+                } catch(e) {}
+            };
+
+            return (
+                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(300px, 1fr))', gap:'2rem'}}>
+                    <div className="glass-card">
+                        <h3 className="card-title">Profil Saya</h3>
+                        <div style={{display:'flex', alignItems:'center', gap:'1rem', marginBottom:'1.5rem'}}>
+                            {user.profile_picture ? (
+                                <img src={`/static/uploads/${user.profile_picture}`} alt="Profile" style={{width:'80px', height:'80px', borderRadius:'50%', objectFit:'cover', border:'3px solid var(--primary)'}} />
+                            ) : (
+                                <ion-icon name="person-circle" style={{fontSize:'5rem', color:'var(--text-muted)'}}></ion-icon>
+                            )}
+                            <div>
+                                <button className="btn" onClick={() => photoInput.current.click()} style={{marginBottom:'0.5rem'}}>Ubah Foto</button>
+                                <input type="file" accept="image/*" ref={photoInput} onChange={uploadPhoto} style={{display:'none'}} />
+                                {user.profile_picture && <button className="btn btn-danger" onClick={removePhoto} style={{marginLeft:'0.5rem'}}>Hapus</button>}
+                            </div>
+                        </div>
+                        <form onSubmit={updateProfile}>
+                            <div className="form-group">
+                                <label className="form-label">Nama Lengkap</label>
+                                <input type="text" className="form-control" value={profile.full_name} onChange={e=>setProfile({...profile, full_name:e.target.value})} required />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Nama Panggilan</label>
+                                <input type="text" className="form-control" value={profile.nickname} onChange={e=>setProfile({...profile, nickname:e.target.value})} />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Jabatan</label>
+                                <input type="text" className="form-control" value={profile.job_title} onChange={e=>setProfile({...profile, job_title:e.target.value})} required />
+                            </div>
+                            <button type="submit" className="btn">Simpan Profil</button>
+                        </form>
+                    </div>
+
+                    {user.role === 'admin' && (
+                        <div className="glass-card">
+                            <h3 className="card-title">Manajemen Akun</h3>
+                            <form onSubmit={addUser} style={{marginBottom:'2rem'}}>
+                                <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'1rem'}}>
+                                    <div className="form-group"><label className="form-label">Username</label><input type="text" className="form-control" value={newUser.username} onChange={e=>setNewUser({...newUser, username:e.target.value})} required /></div>
+                                    <div className="form-group"><label className="form-label">Password</label><input type="password" className="form-control" value={newUser.password} onChange={e=>setNewUser({...newUser, password:e.target.value})} required /></div>
+                                    <div className="form-group"><label className="form-label">Nama Lengkap</label><input type="text" className="form-control" value={newUser.full_name} onChange={e=>setNewUser({...newUser, full_name:e.target.value})} required /></div>
+                                    <div className="form-group"><label className="form-label">Jabatan</label><input type="text" className="form-control" value={newUser.job_title} onChange={e=>setNewUser({...newUser, job_title:e.target.value})} required /></div>
+                                </div>
+                                <button type="submit" className="btn" style={{marginTop:'1rem'}}><ion-icon name="person-add"></ion-icon> Tambah Akun</button>
+                            </form>
+                            
+                            <h4 style={{marginBottom:'1rem', color:'var(--primary)'}}>Daftar Akun</h4>
+                            <div className="table-container">
+                                <table>
+                                    <thead><tr><th>User</th><th>Nama / Jabatan</th><th>Role</th><th>Aksi</th></tr></thead>
+                                    <tbody>
+                                        {users.map(u => (
+                                            <tr key={u.id}>
+                                                <td><div style={{fontWeight:600}}>{u.username}</div></td>
+                                                <td>
+                                                    <div style={{fontWeight:600}}>{u.full_name || '-'}</div>
+                                                    <div style={{fontSize:'0.75rem', color:'var(--text-muted)'}}>{u.job_title || '-'}</div>
+                                                </td>
+                                                <td><span className="badge badge-neutral">{u.role}</span></td>
+                                                <td>
+                                                    {u.username !== 'admin' && u.id !== user.id && (
+                                                        <button className="btn btn-danger" onClick={()=>delUser(u.id)}><ion-icon name="trash"></ion-icon></button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- MAIN APP ---
+
+        function App() {
+            const [user, setUser] = useState(null);
+            const [loading, setLoading] = useState(true);
+            const [toasts, setToasts] = useState([]);
+            const [activeTab, setActiveTab] = useState('overview');
+            const [sidebarOpen, setSidebarOpen] = useState(false);
+
+            const addToast = (msg, type='success') => {
+                const id = Date.now();
+                setToasts(prev => [...prev, {id, message:msg, type}]);
+                setTimeout(() => {
+                    setToasts(prev => prev.filter(t => t.id !== id));
+                }, 3000);
+            };
+
+            useEffect(() => {
+                fetch('/api/me').then(r=>r.json()).then(d=>{
+                    if(d.status==='success') setUser(d.user);
+                    setLoading(false);
+                }).catch(()=>setLoading(false));
+            }, []);
+
+            const doLogout = async () => {
+                await fetch('/api/logout', {method:'POST'});
+                setUser(null);
+            };
+
+            const switchTab = (tabId) => {
+                setActiveTab(tabId);
+                setSidebarOpen(false);
+            };
+
+            if(loading) return <div className="login-screen"><ion-icon name="sync" className="spin" style={{fontSize:'3rem', color:'var(--primary)'}}></ion-icon></div>;
+            
+            if(!user) return <><Login onLogin={setUser} addToast={addToast}/><Toast toasts={toasts}/></>;
+
+            const renderContent = () => {
+                switch(activeTab) {
+                    case 'overview': return <Overview />;
+                    case 'devices': return <Devices />;
+                    case 'usb': return <UsbMonitoring />;
+                    case 'login': return <LoginActivity />;
+                    case 'user': return <UserActivity />;
+                    case 'policy': return <UsbPolicy addToast={addToast} />;
+                    case 'settings': return <Settings user={user} onUpdateUser={setUser} addToast={addToast} />;
+                    default: return <Overview />;
+                }
+            };
+
+            const navs = [
+                {id: 'overview', name: 'Overview', icon: 'grid'},
+                {id: 'devices', name: 'Perangkat', icon: 'desktop'},
+                {id: 'usb', name: 'USB Monitoring', icon: 'hardware-chip'},
+                {id: 'login', name: 'Login Activity', icon: 'log-in'},
+                {id: 'user', name: 'Aktivitas User', icon: 'person'},
+                {id: 'policy', name: 'Kebijakan USB', icon: 'shield-checkmark'},
+                {id: 'settings', name: 'Pengaturan Profil', icon: 'settings'}
+            ];
+
+            return (
+                <div className="app-container">
+                    {/* Mobile Overlay */}
+                    <div 
+                        className={`sidebar-overlay ${sidebarOpen ? 'active' : ''}`}
+                        onClick={() => setSidebarOpen(false)}
+                    />
+
+                    <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
+                        <div className="sidebar-brand">
+                            <img src="/static/new-logo-bdgianyar.png" alt="BD Gianyar Logo" style={{height:'40px', objectFit:'contain'}} />
+                            <span style={{fontSize:'1rem'}}>SIEM</span>
+                        </div>
+                        <ul className="nav-menu">
+                            {navs.map(n => (
+                                <li className="nav-item" key={n.id}>
+                                    <a className={`nav-link ${activeTab===n.id?'active':''}`} onClick={() => switchTab(n.id)}>
+                                        <ion-icon name={n.icon}></ion-icon> {n.name}
+                                    </a>
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="sidebar-footer">
+                            <div style={{display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'1rem'}}>
+                                {user.profile_picture ? (
+                                    <img src={`/static/uploads/${user.profile_picture}`} alt="Profile" style={{width:'40px', height:'40px', borderRadius:'50%', objectFit:'cover', border:'2px solid var(--primary)'}} />
+                                ) : (
+                                    <ion-icon name="person-circle" style={{fontSize:'2.5rem', color:'var(--text-muted)'}}></ion-icon>
+                                )}
+                                <div style={{overflow:'hidden'}}>
+                                    <div style={{fontWeight:600, whiteSpace:'nowrap', textOverflow:'ellipsis', overflow:'hidden'}} title={user.full_name || user.username}>{user.full_name || user.username}</div>
+                                    <div style={{fontSize:'0.75rem', color:'var(--text-muted)', whiteSpace:'nowrap', textOverflow:'ellipsis', overflow:'hidden'}}>{user.job_title || user.role}</div>
+                                </div>
+                            </div>
+                            <button className="btn btn-outline" style={{width:'100%', justifyContent:'center'}} onClick={doLogout}>
+                                <ion-icon name="log-out"></ion-icon> Logout
+                            </button>
+                        </div>
+                    </aside>
+                    <main className="main-content">
+                        <header className="topbar">
+                            <div style={{display:'flex', alignItems:'center', gap:'0.75rem'}}>
+                                <button className="hamburger-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                                    <ion-icon name={sidebarOpen ? 'close' : 'menu'}></ion-icon>
+                                </button>
+                                <h3 style={{fontWeight:500, color:'var(--text-muted)'}}>{navs.find(n=>n.id===activeTab)?.name.toUpperCase()}</h3>
+                            </div>
+                            <div className="badge badge-success"><div style={{width:'8px',height:'8px',borderRadius:'50%',background:'currentColor',boxShadow:'0 0 8px currentColor',animation:'pulse-danger 2s infinite'}}></div> SERVER ONLINE</div>
+                        </header>
+                        <div className="content-area">
+                            {renderContent()}
+                        </div>
+                    </main>
+                    <Toast toasts={toasts} />
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
